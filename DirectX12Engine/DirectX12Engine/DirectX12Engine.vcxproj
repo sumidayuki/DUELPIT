@@ -358,6 +358,8 @@
     <ClInclude Include="EffectSource.h" />
     <ClInclude Include="EffectImporter.h" />
     <ClInclude Include="EffectSystem.h" />
+    <ClInclude Include="Font.h" />
+    <ClInclude Include="FontImporter.h" />
     <ClInclude Include="JSONImporter.h" />
     <ClInclude Include="InputCodeMap.h" />
     <ClInclude Include="MoveInput.h" />

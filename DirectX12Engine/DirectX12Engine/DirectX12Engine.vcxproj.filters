@@ -457,6 +457,12 @@
     <Filter Include="Engine\Resource\AssetImporter\JSON">
       <UniqueIdentifier>{62e88eeb-c34e-4908-901d-009b326f1694}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Engine\Resource\Asset\Font">
+      <UniqueIdentifier>{73dac274-dedd-47da-a619-b4e992af1d37}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Resource\AssetImporter\Font">
+      <UniqueIdentifier>{1369ca30-35f9-4e43-8928-b932ed8c1610}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -1472,6 +1478,11 @@
     <ClInclude Include="UINavigationSystem.h" />
     <ClInclude Include="UINavigation.h">
       <Filter>Engine\ECS\Component\UI</Filter>
+    <ClInclude Include="Font.h">
+      <Filter>Engine\Resource\Asset\Font</Filter>
+    </ClInclude>
+    <ClInclude Include="FontImporter.h">
+      <Filter>Engine\Resource\AssetImporter\Font</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
