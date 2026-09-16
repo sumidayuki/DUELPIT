@@ -32,6 +32,7 @@ void SceneManager::ProcessPendingSceneChange()
 		}
 
 		// シーン読み込みに費やした時間をスキップする
+		Time::SetTimeScale(1.0f);
 		Time::ResetDeltaTimeOnSceneLoad();
 	}
 }

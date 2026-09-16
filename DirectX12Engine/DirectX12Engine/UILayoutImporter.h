@@ -12,10 +12,12 @@ public:
 private:
 	void ProcessCanvas(const Json& json, World& world);
 	void ProcessElement(const Json& json, Entity parent, World& world);
-	void ProcessImage(const Json& json, Entity parent, World& world);
-	void ProcessPanel(const Json& json, Entity parent, World& world);
-	void ProcessButton(const Json& json, Entity parent, World& world);
-	void ProcessSlider(const Json& json, Entity parent, World& world);
+	void ProcessNavigation(const Json& json, UINavigation& navigation);
+	Entity ProcessImage(const Json& json, Entity parent, World& world);
+	Entity ProcessPanel(const Json& json, Entity parent, World& world);
+	Entity ProcessButton(const Json& json, Entity parent, World& world);
+	void ProcessOnClick(const Json& json, Button& button);
+	Entity ProcessSlider(const Json& json, Entity parent, World& world);
 	void ProcessVerticalLayout(const Json& json, Entity parent, World& world);
 	void ProcessRectTransform(const Json& json, RectTransform& rect);
 	void ProcessRectOffset(const Json& json, RectOffset& rectOffset);

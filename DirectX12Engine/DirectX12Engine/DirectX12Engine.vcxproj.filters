@@ -738,9 +738,6 @@
     <ClCompile Include="UILayoutImporter.cpp">
       <Filter>Engine\Resource\AssetImporter\UILayout</Filter>
     </ClCompile>
-    <ClCompile Include="ButtonFunctionRegistry.cpp">
-      <Filter>Engine\Resource\Asset\UI</Filter>
-    </ClCompile>
     <ClCompile Include="UIManager.cpp">
       <Filter>Engine\Resource\Asset\UI</Filter>
     </ClCompile>
@@ -824,6 +821,9 @@
     </ClCompile>
     <ClCompile Include="JSONImporter.cpp">
       <Filter>Engine\Resource\AssetImporter\JSON</Filter>
+    </ClCompile>
+    <ClCompile Include="ButtonFunctionRegistry.cpp">
+      <Filter>Engine\Resource\Asset\UI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1334,9 +1334,6 @@
     <ClInclude Include="UILayoutImporter.h">
       <Filter>Engine\Resource\AssetImporter\UILayout</Filter>
     </ClInclude>
-    <ClInclude Include="ButtonFunctionRegistry.h">
-      <Filter>Engine\Resource\Asset\UI</Filter>
-    </ClInclude>
     <ClInclude Include="CollisionEvents.h">
       <Filter>Engine\ECS\Component\Collider</Filter>
     </ClInclude>
@@ -1468,6 +1465,13 @@
     </ClInclude>
     <ClInclude Include="JSONImporter.h">
       <Filter>Engine\Resource\AssetImporter\JSON</Filter>
+    </ClInclude>
+    <ClInclude Include="ButtonFunctionRegistry.h">
+      <Filter>Engine\Resource\Asset\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="UINavigationSystem.h" />
+    <ClInclude Include="UINavigation.h">
+      <Filter>Engine\ECS\Component\UI</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

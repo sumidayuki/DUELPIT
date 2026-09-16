@@ -2,6 +2,11 @@
 #include "SystemList.h"
 using namespace UIAPI;
 
+TitleScene::TitleScene()
+	: Scene("Title", GameMode::Game)
+{
+}
+
 bool TitleScene::Load()
 {
 	m_world.AddSystem(std::make_unique<InputSystem>());

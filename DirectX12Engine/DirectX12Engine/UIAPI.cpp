@@ -7,6 +7,18 @@ namespace UIAPI
 		uiImage->sprite = sprite;
 	}
 
+	void SetEnableCanvas(World& world, Entity canvas, bool isEnable)
+	{
+		Transform* transform = world.GetComponent<Transform>(canvas);
+		transform->isActive = isEnable;
+	}
+
+	bool IsCanvasEnabled(World& world, Entity canvas)
+	{
+		Transform* transform = world.GetComponent<Transform>(canvas);
+		return transform->isActive;
+	}
+
 	Entity CreateCanvas(World& world, RenderMode mode, int sortingOrder)
 	{
 		Entity e = world.CreateEntity("Canvas");

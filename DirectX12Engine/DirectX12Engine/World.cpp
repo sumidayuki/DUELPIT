@@ -433,19 +433,14 @@ bool World::Unload(World& world)
 	m_allEntities.clear();
 	m_allRootEntities.clear();
 	m_entityNames.clear();
+
 	m_systems.clear();
+	m_coreSystems.clear();
+
 	m_cameraSystem = nullptr;
 
 	m_am.Clear();
 	m_em.Clear();
-
-	for (auto& sys : m_systems)
-	{
-		if (!sys->Load(world))
-		{
-			return false;
-		}
-	}
 
 	return true;
 }

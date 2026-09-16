@@ -1,5 +1,11 @@
 #pragma once
 
+enum class UICanvasMode
+{
+	HUD,		// HUDなど。ゲーム中に表示する
+	Interactive,// Pause、Inventoryなど。操作する
+};
+
 enum RenderMode
 {
 	ScreenSpaceOverlay,		// スクリーンスペースオーバーレイ
@@ -10,6 +16,16 @@ enum RenderMode
 struct Canvas : IComponentData
 {
 	RenderMode renderMode = RenderMode::ScreenSpaceOverlay;
+	UICanvasMode canvasMode = UICanvasMode::HUD;
 
-	int sortingOrder = 0;									// 描画順序 (同じRenderMode内で、値が小さいほど先に描画されます)
+	int sortingOrder = 0;	// 描画順序 (同じRenderMode内で、値が小さいほど先に描画されます)
+
+	// このCanvasを操作対象にするか
+	bool interactable = false;
+
+	// 開いている間ゲームを停止するか
+	bool pauseGame = false;
+
+	// UI操作開始時に選択するオブジェクト
+	Entity firstSelected = INVALID_ENTITY;
 };

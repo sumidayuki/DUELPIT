@@ -170,7 +170,7 @@ void PlayerSystem::Update(World& world)
 
 			if (!animator.isPlaying)
 			{
-				SceneManager::ChangeScene("Title");
+				world.GetSystem<GameManagerSystem>()->NotifyDeath(entity, world);
 			}
 
 			continue;

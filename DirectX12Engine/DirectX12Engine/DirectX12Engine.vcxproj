@@ -487,6 +487,8 @@
     <ClInclude Include="UILayoutImporter.h" />
     <ClInclude Include="UILayoutSystem.h" />
     <ClInclude Include="UIManager.h" />
+    <ClInclude Include="UINavigation.h" />
+    <ClInclude Include="UINavigationSystem.h" />
     <ClInclude Include="UISliderSystem.h" />
     <ClInclude Include="Utils.h" />
     <ClInclude Include="Vector3Int.h" />

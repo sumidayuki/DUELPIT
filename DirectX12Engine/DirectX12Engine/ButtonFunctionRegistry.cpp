@@ -2,18 +2,28 @@
 
 ButtonFunctionRegistry::ButtonFunctionRegistry()
 {
-	// タイトルシーンに遷移
-	RegisterFunction("ToTitleScene", []() {
-		SceneManager::ChangeScene("TitleScene");
-	});
+	RegisterFunction(
+		"LoadToScene",
+		[](const Json& args)
+		{
+			const std::string& sceneName = args.value("sceneName", SceneManager::GetCurrentScene()->GetName());
+			SceneManager::ChangeScene(sceneName);
+		}
+	);
 }
 
-void ButtonFunctionRegistry::RegisterFunction(const std::string& name, const std::function<void()>& function)
+void ButtonFunctionRegistry::RegisterFunction(const std::string& name, const std::function<void(const Json&)>& function)
 {
-	m_functions[name] = function;
+	m_functions.emplace(name, function);
 }
 
-std::function<void()> ButtonFunctionRegistry::GetFunction(const std::string& name) const
+std::function<void(const Json&)> ButtonFunctionRegistry::GetFunction(const std::string& name) const
 {
-	return std::function<void()>();
+	auto it = m_functions.find(name);
+	if (it != m_functions.end())
+	{
+		return it->second;
+	}
+
+	return nullptr;
 }

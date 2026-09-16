@@ -1,6 +1,9 @@
 {
     "canvas": {
         "renderMode": "ScreenSpaceOverlay",
+        "canvasMoce": "HUD",
+        "pauseGame": false,
+        "interactive": false,
         "sortingOrder": 0,
         "elements": [
             {

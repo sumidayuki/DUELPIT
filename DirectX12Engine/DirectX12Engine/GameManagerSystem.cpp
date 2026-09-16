@@ -8,9 +8,7 @@
 
 void GameManagerSystem::NotifyDeath(Entity character, World& world)
 {
-	Time::SetTimeScale(0.0f);
-
-	m_resultCanvas.enabled = true;
+	UIManager::GetInstance()->OpenCanvas(world, HashString("ResultUI"));
 
 	Entity text = UIManager::GetInstance()->GetUIObject(HashString("ResultUI"), HashString("ResultText"));
 	UIGraphic* textUI = world.GetComponent<UIGraphic>(text);
@@ -113,13 +111,4 @@ void GameManagerSystem::Start(World& world)
 
 void GameManagerSystem::Update(World& world)
 {
-	if (!world.IsAlive(m_player))
-	{
-
-	}
-
-	if (!world.IsAlive(m_enemy))
-	{
-
-	}
 }

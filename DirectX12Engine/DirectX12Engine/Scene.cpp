@@ -1,8 +1,23 @@
 #include "Precompiled.h"
 
-Scene::Scene()
-	: isStart(false)
+Scene::Scene(const std::string& name, const GameMode& startGameMode)
+	: m_name(name)
+	, m_gameMode(startGameMode)
+	, isStart(false)
 {
+}
+
+void Scene::SetGameMode(const GameMode& gameMode)
+{
+	m_gameMode = gameMode;
+	if (m_gameMode == GameMode::Game)
+	{
+		Time::SetTimeScale(1.0f);
+	}
+	else
+	{
+		Time::SetTimeScale(0.0f);
+	}
 }
 
 bool Scene::OnLoad()

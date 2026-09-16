@@ -140,11 +140,38 @@ void InputManager::Update()
 	{
 		m_currentInputDeviceType = InputDeviceType::Keyboard_Mouse;
 	}
-
-	if (gamepadInput)
+    else if (gamepadInput)
 	{
 		m_currentInputDeviceType = InputDeviceType::Gamepad;
 	}
+
+    Scene* scene = SceneManager::GetCurrentScene();
+
+    if (scene)
+    {
+        GameMode mode = scene->GetGameMode();
+
+        if (mode == GameMode::Game)
+        {
+            // ƒQ[ƒ€’†‚Íí‚ÉŒÅ’è•”ñ•\¦
+            Mouse::SetLock(true);
+            Mouse::SetVisible(false);
+        }
+        else if (mode == GameMode::UI)
+        {
+            // UI’†
+            Mouse::SetLock(false);
+
+            if (m_currentInputDeviceType == InputDeviceType::Keyboard_Mouse)
+            {
+                Mouse::SetVisible(true);
+            }
+            else if (m_currentInputDeviceType == InputDeviceType::Gamepad)
+            {
+                Mouse::SetVisible(false);
+            }
+        }
+    }
 }
 
 void InputManager::UpdateSpriteBindMap()

@@ -316,6 +316,7 @@ enum class GamepadButton;
 #include "Damageable.h"
 #include "Rigidbody.h"
 #include "UIGraphic.h"
+#include "UINavigation.h"
 #include "Canvas.h"
 #include "Image.h"
 #include "Button.h"

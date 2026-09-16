@@ -7,6 +7,7 @@ private:
 	SpriteRenderer* m_titleText;
 
 public:
+	TitleScene();
 	bool Load() override;
 	void Start() override;
 	void Update() override;

@@ -14,6 +14,18 @@ static const std::unordered_map<std::string, TextAnchor> TextAnchorMap =
 	{ "LowerRight",		TextAnchor::LowerRight }		// 下右
 };
 
+std::unordered_map<std::string, RenderMode> StrToRenderModeMap =
+{
+	{ "ScreenSpaceOverlay", RenderMode::ScreenSpaceOverlay },
+	{ "ScreenSpaceCamera", RenderMode::ScreenSpaceCamera },
+	{ "WorldSpace", RenderMode::WorldSpace }
+};
+
+std::unordered_map<std::string, UICanvasMode> StrToCanvasModeMap =
+{
+	{ "HUD", UICanvasMode::HUD },
+	{ "Interactive", UICanvasMode::Interactive }
+};
 
 UILayoutImporter::UILayoutImporter()
 {
@@ -73,6 +85,9 @@ bool UILayoutImporter::Import(World& world)
 		oss << "JSON要素の解析中にエラーが発生: " << e.what() << "\n";
 		OutputDebugStringA(oss.str().c_str());
 	}
+
+	OutputDebugStringA("UILayoutImporter: インポートに成功しました。");
+
 	return true;
 }
 
@@ -81,61 +96,92 @@ void UILayoutImporter::ProcessCanvas(const Json& json, World& world)
 	const Json& canvasJson = json.value("canvas", Json::object());
 
 	Canvas canvas;
+	
+	// レンダーモードを設定
 	std::string renderMode = canvasJson.value("renderMode", "ScreenSpaceOverlay");
-	if (renderMode == "ScreenSpaceOverlay")
-	{
-		canvas.renderMode = RenderMode::ScreenSpaceOverlay;
-	}
-	else if (renderMode == "ScreenSpaceCamera")
-	{
-		canvas.renderMode = RenderMode::ScreenSpaceCamera;
-	}
-	else if (renderMode == "WorldSpace")
-	{
-		canvas.renderMode = RenderMode::WorldSpace;
-	}
-	else
-	{
-		std::ostringstream oss;
-		oss << "不明なRenderMode: " << renderMode << "\n";
-		OutputDebugStringA(oss.str().c_str());
-		canvas.renderMode = RenderMode::ScreenSpaceOverlay;
-	}
-	canvas.sortingOrder = canvasJson.value("sortingOrder", 0);
+	canvas.renderMode = StrToRenderModeMap.at(renderMode);
 
-	Entity canvasEntity = UIAPI::CreateCanvas(world, UTF16LEtoUTF8::Convert(GetFileNameWithoutExtension()), canvas);
+	// キャンバスモードを設定
+	std::string canvasMode = canvasJson.value("canvasMode", "HUD");
+	canvas.canvasMode = StrToCanvasModeMap.at(canvasMode);
+
+	// 描画順を設定
+	canvas.sortingOrder = canvasJson.value("sortingOrder", 0);
+	
+	// このキャンバスを開いているときにpauseするか
+	canvas.pauseGame = canvasJson.value("pauseGame", true);
+
+	// 操作可能なCanvasか
+	canvas.interactable = canvasJson.value("interactive", true);
+
+	// キャンバスの名前を取得
+	std::string canvasName = UTF16LEtoUTF8::Convert(GetFileNameWithoutExtension());
+	uint64_t canvasID = HashString(canvasName.c_str());
+
+	Entity canvasEntity = UIAPI::CreateCanvas(world, canvasName, canvas);
 	UIManager::GetInstance()->AddCanvas(canvasEntity, HashString(UTF16LEtoUTF8::Convert(GetFileNameWithoutExtension()).c_str()));
 
+	// キャンバス内で描画するUIObjectの作成
 	const Json& elements = canvasJson.value("elements", Json::array());
 	for (const auto& elementJson : elements)
 	{
 		ProcessElement(elementJson, canvasEntity, world);
 	}
+
+	// キャンバスを開いた際に選択するオブジェクトを設定
+	if (canvasJson.contains("firstSelected") && canvasJson["firstSelected"].is_string())
+	{
+		const std::string firstSelectedName = canvasJson["firstSelected"].get<std::string>();
+
+		const uint64_t objectID = HashString(firstSelectedName.c_str());
+
+		Entity firstSelected = UIManager::GetInstance()->GetUIObject(canvasID, objectID);
+
+		if (firstSelected != INVALID_ENTITY)
+		{
+			Canvas* canvasData = world.GetComponent<Canvas>(canvasEntity);
+
+			if (canvasData)
+			{
+				canvasData->firstSelected = firstSelected;
+			}
+		}
+		else
+		{
+			std::ostringstream oss;
+			oss << "UILayoutImporter: " << "firstSelected UI object not found: " << firstSelectedName << "\n";
+			OutputDebugStringA(oss.str().c_str());
+		}
+	}
+
+	UIAPI::SetEnableCanvas(world, canvasEntity, false);
 }
 
 void UILayoutImporter::ProcessElement(const Json& json, Entity parent, World& world)
 {
 	const std::string& type = json["type"].get<std::string>();
 
+	Entity element = INVALID_ENTITY;
+
 	if (type == "Image")
 	{
-		ProcessImage(json, parent, world);
+		element = ProcessImage(json, parent, world);
 	}
 	else if (type == "Panel")
 	{
-		ProcessPanel(json, parent, world);
+		element = ProcessPanel(json, parent, world);
 	}
 	else if (type == "Button")
 	{
-		ProcessButton(json, parent, world);
+		element = ProcessButton(json, parent, world);
 	}
 	else if (type == "Slider")
 	{
-		ProcessSlider(json, parent, world);
+		element = ProcessSlider(json, parent, world);
 	}
 	else if(type == "VerticalLayoutGroup")
 	{
-		ProcessVerticalLayout(json, parent, world);
+		 ProcessVerticalLayout(json, parent, world);
 	}
 	else
 	{
@@ -143,9 +189,37 @@ void UILayoutImporter::ProcessElement(const Json& json, Entity parent, World& wo
 		oss << "不明なUI要素のタイプ: " << type << "\n";
 		OutputDebugStringA(oss.str().c_str());
 	}
+
+	if (json.contains("navigation"))
+	{
+		const Json& navJson = json.value("navigation", Json::object());
+		UINavigation navigation;
+		ProcessNavigation(navJson, navigation);
+		world.AddComponent<UINavigation>(element, navigation);
+	}
 }
 
-void UILayoutImporter::ProcessImage(const Json& json, Entity parent, World& world)
+void UILayoutImporter::ProcessNavigation(const Json& json, UINavigation& navigation)
+{
+	if (json.contains("up"))
+	{
+		navigation.up = HashString(json.value("up", "").c_str());
+	}
+	if (json.contains("down"))
+	{
+		navigation.down = HashString(json.value("down", "").c_str());
+	}
+	if (json.contains("left"))
+	{
+		navigation.left = HashString(json.value("left", "").c_str());
+	}
+	if (json.contains("right"))
+	{
+		navigation.right = HashString(json.value("right", "").c_str());
+	}
+}
+
+Entity UILayoutImporter::ProcessImage(const Json& json, Entity parent, World& world)
 {
 	const std::string& name = json.value("name", "UIImage");
 
@@ -180,9 +254,11 @@ void UILayoutImporter::ProcessImage(const Json& json, Entity parent, World& worl
 	{
 		ProcessElement(childJson, imageEntity, world);
 	}
+
+	return imageEntity;
 }
 
-void UILayoutImporter::ProcessPanel(const Json& json, Entity parent, World& world)
+Entity UILayoutImporter::ProcessPanel(const Json& json, Entity parent, World& world)
 {
 	const std::string& name = json.value("name", "UIPanel");
 
@@ -202,9 +278,11 @@ void UILayoutImporter::ProcessPanel(const Json& json, Entity parent, World& worl
 	{
 		ProcessElement(childJson, panelEntity, world);
 	}
+
+	return panelEntity;
 }
 
-void UILayoutImporter::ProcessButton(const Json& json, Entity parent, World& world)
+Entity UILayoutImporter::ProcessButton(const Json& json, Entity parent, World& world)
 {
 	const std::string& name = json.value("name", "UIButton");
 
@@ -229,12 +307,14 @@ void UILayoutImporter::ProcessButton(const Json& json, Entity parent, World& wor
 
 	Button button;
 	button.sprite = sprite;
-	button.onClick = ButtonFunctionRegistry::GetInstance()->GetFunction(json.value("onClick", ""));
 	button.normalColor = Color(normalColor[0], normalColor[1], normalColor[2], normalColor[3]);
 	button.hoveredColor = Color(hoveredColor[0], hoveredColor[1], hoveredColor[2], hoveredColor[3]);
 	button.selectedColor = Color(selectedColor[0], selectedColor[1], selectedColor[2], selectedColor[3]);
 	button.pressedColor = Color(pressedColor[0], pressedColor[1], pressedColor[2], pressedColor[3]);
 	button.disabledColor = Color(disabledColor[0], disabledColor[1], disabledColor[2], disabledColor[3]);
+
+	const Json& onClick = json.value("onClick", Json::object());
+	ProcessOnClick(onClick, button);
 
 	Entity buttonEntity = UIAPI::CreateButton(world, name, parent, rect, graphic, button);
 	UIManager::GetInstance()->AddUIObject(buttonEntity, HashString(UTF16LEtoUTF8::Convert(GetFileNameWithoutExtension()).c_str()), HashString(name.c_str()));
@@ -244,9 +324,32 @@ void UILayoutImporter::ProcessButton(const Json& json, Entity parent, World& wor
 	{
 		ProcessElement(childJson, buttonEntity, world);
 	}
+
+	return buttonEntity;
 }
 
-void UILayoutImporter::ProcessSlider(const Json& json, Entity parent, World& world)
+void UILayoutImporter::ProcessOnClick(const Json& json, Button& button)
+{
+	// 関数名を取得
+	std::string functionName = json.value("function", "");
+
+	// レジストリから関数を取得
+	auto function = ButtonFunctionRegistry::GetInstance()->GetFunction(functionName);
+
+	if (function)
+	{
+		// 引数を取得
+		auto args = json.value("args", Json::object());
+
+		// 関数と引数をラムダ式で実行
+		button.onClick = [function, args]()
+		{
+			function(args);
+		};
+	}
+}
+
+Entity UILayoutImporter::ProcessSlider(const Json& json, Entity parent, World& world)
 {
 	const std::string& name = json.value("name", "UISlider");
 
@@ -290,6 +393,8 @@ void UILayoutImporter::ProcessSlider(const Json& json, Entity parent, World& wor
 	{
 		ProcessElement(childJson, sliderEntity, world);
 	}
+
+	return sliderEntity;
 }
 
 void UILayoutImporter::ProcessVerticalLayout(const Json& json, Entity parent, World& world)

@@ -1,17 +1,5 @@
 #include "UIManager.h"
 
-UIManager::UIManager()
-{
-	m_canvasEntities.clear();
-	m_uiObjects.clear();
-}
-
-UIManager::~UIManager()
-{
-	m_canvasEntities.clear();
-	m_uiObjects.clear();
-}
-
 void UIManager::AddCanvas(Entity entity, uint64_t canvasID)
 {
 	m_canvasEntities[canvasID] = entity;
@@ -24,7 +12,7 @@ Entity UIManager::GetCanvas(uint64_t canvasID)
 	{
 		return it->second;
 	}
-	return Entity{ 0, 0 };
+	return INVALID_ENTITY;
 }
 
 void UIManager::AddUIObject(Entity entity, uint64_t canvasID, uint64_t objectID)
@@ -45,4 +33,144 @@ Entity UIManager::GetUIObject(uint64_t canvasID, uint64_t objectID)
 		}
 	}
 	return INVALID_ENTITY;
+}
+
+void UIManager::ShowCanvas(World& world, uint64_t canvasID)
+{
+	Entity canvas = GetCanvas(canvasID);
+
+	if (canvas == INVALID_ENTITY)
+	{
+		return;
+	}
+
+	UIAPI::SetEnableCanvas(world, canvas, true);
+}
+
+void UIManager::HideCanvas(World& world, uint64_t canvasID)
+{
+	Entity canvas = GetCanvas(canvasID);
+
+	if (canvas == INVALID_ENTITY)
+	{
+		return;
+	}
+
+	UIAPI::SetEnableCanvas(world, canvas, false);
+}
+
+bool UIManager::OpenCanvas(World& world, uint64_t canvasID)
+{
+	Entity canvas = GetCanvas(canvasID);
+
+	if (canvas == INVALID_ENTITY)
+	{
+		return false;
+	}
+
+	Canvas* canvasData = world.GetComponent<Canvas>(canvas);
+
+	if (!canvasData)
+	{
+		return false;
+	}
+
+	if (canvasData->canvasMode != UICanvasMode::Interactive)
+	{
+		return false;
+	}
+
+	if (IsCanvasOpen(canvas))
+	{
+		return false;
+	}
+
+	m_canvasStack.push_back(canvas);
+
+	UIAPI::SetEnableCanvas(world, canvas, true);
+
+	if (canvasData->firstSelected != INVALID_ENTITY && 
+		InputManager::GetCurrentInputDeviceType() == InputDeviceType::Gamepad)
+	{
+		UIEventSystem::SetSelected(canvasData->firstSelected);
+	}
+
+	if (canvasData->pauseGame)
+	{
+		SceneManager::GetCurrentScene()->SetGameMode(GameMode::UI);
+	}
+
+	return true;
+}
+
+bool UIManager::CloseCanvas(World& world)
+{
+	if (m_canvasStack.empty())
+	{
+		return false;
+	}
+
+	Entity canvas = m_canvasStack.back();
+
+	m_canvasStack.pop_back();
+
+	UIAPI::SetEnableCanvas(world, canvas, false);
+
+	// ‰º‚ÉCanvas‚ªŽc‚Á‚Ä‚¢‚é
+	if (!m_canvasStack.empty())
+	{
+		Entity previousCanvas = m_canvasStack.back();
+
+		Canvas* canvasData = world.GetComponent<Canvas>(previousCanvas);
+
+		if (canvasData && canvasData->firstSelected != INVALID_ENTITY && 
+			InputManager::GetCurrentInputDeviceType() == InputDeviceType::Gamepad)
+		{
+			UIEventSystem::SetSelected(canvasData->firstSelected);
+		}
+	}
+	else
+	{
+		// UI‘€ì‘ÎÛ‚ª‚È‚­‚È‚Á‚½
+		UIEventSystem::SetSelected(INVALID_ENTITY);
+		SceneManager::GetCurrentScene()->SetGameMode(GameMode::Game);
+	}
+
+	return true;
+}
+
+void UIManager::CloseAllCanvas(World& world)
+{
+	while (!m_canvasStack.empty())
+	{
+		CloseCanvas(world);
+	}
+}
+
+Entity UIManager::GetCurrentCanvas() const
+{
+	if (m_canvasStack.empty())
+	{
+		return INVALID_ENTITY;
+	}
+
+	return m_canvasStack.back();
+}
+
+bool UIManager::HasOpenCanvas() const
+{
+	return !m_canvasStack.empty();
+}
+
+bool UIManager::IsCanvasOpen(Entity canvas) const
+{
+	for (const Entity& entity : m_canvasStack)
+	{
+		if (entity == canvas)
+		{
+			return true;
+		}
+	}
+
+	return false;
 }

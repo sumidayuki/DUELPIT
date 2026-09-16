@@ -7,6 +7,7 @@
 #include "MainScene.h"
 #include "ShaderRegistry.h"
 #include "AIRuleRegistry.h"
+#include "ButtonFunctionRegistry.h"
 
 void Application::Run()
 {
@@ -85,6 +86,8 @@ void Application::WorkerThreadEntryPoint()
 	EffectManager::GetInstance()->Initialize();
 
 	AIRuleRegistry::CreateSingleton();
+    
+    ButtonFunctionRegistry::CreateSingleton();
 
     // スプライトレンダラーの初期化
     SpriteRendererSystem::StaticConstructor();
@@ -189,6 +192,8 @@ void Application::WorkerThreadEntryPoint()
 	EffectManager::DestroySingleton();
 
 	AIRuleRegistry::DestroySingleton();
+
+    ButtonFunctionRegistry::DestroySingleton();
 
     DebugManager::GetInstance()->Shutdown();
     DebugManager::GetInstance()->DestroySingleton();

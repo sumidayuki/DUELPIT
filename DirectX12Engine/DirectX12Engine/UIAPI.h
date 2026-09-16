@@ -5,6 +5,10 @@ namespace UIAPI
 	// IMAGEコンポーネントにスプライトを設定します。
     void SetSprite(Image* uiImage, Sprite* sprite);
 
+	void SetEnableCanvas(World& world, Entity canvas, bool isEnable);
+
+	bool IsCanvasEnabled(World& world, Entity canvas);
+
 	// Canvasエンティティを作成します。
     Entity CreateCanvas(World& world, RenderMode mode = RenderMode::ScreenSpaceOverlay, int sortingOrder = 0);
 	Entity CreateCanvas(World& world, const std::string& name, const Canvas& canvas);

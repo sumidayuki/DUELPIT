@@ -6,6 +6,11 @@
 #include "UILayoutImporter.h"
 #include "AIRuleImporter.h"
 
+MainScene::MainScene()
+	:Scene("Main", GameMode::Game) 
+{
+}
+
 bool MainScene::Load()
 {
 	CharacterInfoRegistry::CreateSingleton();
@@ -57,8 +62,8 @@ bool MainScene::Load()
 	importer.Import(L"Assets/Json/UI/MainSceneUI.json", m_world);
 	importer.Import(L"Assets/Json/UI/ResultUI.json", m_world);
 
-	Entity result = UIManager::GetInstance()->GetCanvas(HashString("ResultUI"));
-	result.enabled = false;
+	UIManager::GetInstance()->ShowCanvas(m_world, HashString("MainSceneUI"));
+
 	return true;
 }
 
@@ -84,45 +89,6 @@ void MainScene::Start()
 	Entity wallCol4 = m_world.CreateCube(50.0f, 500.0f, 5000.0f, Layers::Environment, Color::white, true);
 	Transform* wallCol4Transform = m_world.GetComponent<Transform>(wallCol4);
 	wallCol4Transform->position = Vector3(-1400.0f, 250.0f, 0.0f);
-
-	//
-	//Texture2D* wallTexture = AssetManager::GetInstance()->GetAsset<Texture2D>(AssetType::Texture, L"Assets/T_Wall_C.png");
-	//
-	//// 座標の基準リスト
-	//const float coords[] = { 1250.0f, 750.0f, 250.0f, -250.0f, -750.0f, -1250.0f };
-	//
-	//// 床の生成
-	//for (float z : coords)
-	//{
-	//	for (float x : coords)
-	//	{
-	//		Entity floor = m_world.CreateCube(500.0f, 1.0f, 500.0f, Layers::Environment, Color::white, false, wallTexture);
-	//		m_world.GetComponent<Transform>(floor)->position = Vector3(x, 0.0f, z);
-	//	}
-	//}
-	//
-	//// 壁の生成
-	//for (float pos : coords)
-	//{
-	//	// Z = 1500 の壁 (手前)
-	//	Entity wall0 = m_world.CreateCube(500.0f, 500.0f, 50.0f, Layers::Environment, Color::white, false, wallTexture);
-	//	m_world.GetComponent<Transform>(wall0)->position = Vector3(pos, 250.0f, 1500.0f);
-	//
-	//	// Z = -1500 の壁 (奥)
-	//	Entity wall1 = m_world.CreateCube(500.0f, 500.0f, 50.0f, Layers::Environment, Color::white, false, wallTexture);
-	//	m_world.GetComponent<Transform>(wall1)->position = Vector3(pos, 250.0f, -1500.0f);
-	//
-	//	// X = 1500 の壁 (右)
-	//	Entity wall2 = m_world.CreateCube(50.0f, 500.0f, 500.0f, Layers::Environment, Color::white, false, wallTexture);
-	//	m_world.GetComponent<Transform>(wall2)->position = Vector3(1500.0f, 250.0f, pos);
-	//
-	//	// X = -1500 の壁 (左)
-	//	Entity wall3 = m_world.CreateCube(50.0f, 500.0f, 500.0f, Layers::Environment, Color::white, false, wallTexture);
-	//	m_world.GetComponent<Transform>(wall3)->position = Vector3(-1500.0f, 250.0f, pos);
-	//}
-
-	Mouse::SetVisible(false);
-	Mouse::SetLock(true);
 }
 
 void MainScene::Update()

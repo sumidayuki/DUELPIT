@@ -1,5 +1,11 @@
 #pragma once
 
+enum class GameMode
+{
+	Game,
+	UI
+};
+
 /// <summary>
 /// クラス名：Scene
 /// 概要：シーンの開始処理・更新処理・描画処理を行う基底クラスです。
@@ -12,8 +18,11 @@ public:
 	bool isStart;
 
 protected:
+	std::string m_name;
+	GameMode m_gameMode;
 	World m_world;
 
+protected:
 	virtual bool Load() = 0;
 	virtual void Unload() {}// シーンが終了するときの後片付け
 	virtual void Start() = 0;// シーンが始まった時
@@ -21,10 +30,15 @@ protected:
 	virtual void Draw() = 0;// シーンの描画処理
 
 public:
-	Scene();
+	explicit Scene(const std::string& name, const GameMode& gameMode);
 
 	// デストラクタ
 	virtual ~Scene() = default;
+
+	const std::string& GetName() const { return m_name; }
+	
+	void SetGameMode(const GameMode& gameMode);
+	const GameMode& GetGameMode() const { return m_gameMode; }
 
 	World& GetWorld() { return m_world; }
 
