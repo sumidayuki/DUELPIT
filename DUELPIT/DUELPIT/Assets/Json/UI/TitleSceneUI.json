@@ -1,0 +1,45 @@
+{
+    "canvas": {
+        "renderMode": "ScreenSpaceOverlay",
+        "canvasMoce": "HUD",
+        "pauseGame": false,
+        "interactive": false,
+        "sortingOrder": 0,
+        "elements": [
+            {
+                "name": "Image_Title",
+                "type": "Image",
+                "source": "Assets/Title.png",
+                "rectT": {
+                    "pos": [ 0, 0 ],
+                    "size": [ 1920, 1080 ],
+                    "anchorMin": [ 0.5, 0.5 ],
+                    "anchorMax": [ 0.5, 0.5 ],
+                    "pivot": [ 0.5, 0.5 ]
+                },
+                "graphic": {
+                    "color": [ 1, 1, 1, 1 ],
+                    "depth": 0,
+                    "raycastTarget": false
+                }
+            },
+            {
+                "name": "Text_Title",
+                "type": "Image",
+                "source": "Assets/Title_Text.png",
+                "rectT": {
+                    "pos": [ 0, 300 ],
+                    "size": [ 1100, 200 ],
+                    "anchorMin": [ 0.5, 0.5 ],
+                    "anchorMax": [ 0.5, 0.5 ],
+                    "pivot": [ 0.5, 0.5 ]
+                },
+                "graphic": {
+                    "color": [ 1, 1, 1, 1 ],
+                    "depth": 0,
+                    "raycastTarget": false
+                }
+            }
+        ]
+    }
+}

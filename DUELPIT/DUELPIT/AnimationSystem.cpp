@@ -1,0 +1,251 @@
+#include "AnimationSystem.h"
+
+void AnimationSystem::Play(Animator& animator, const std::string& clipName, bool absolutePlay)
+{
+	// 現在再生中のクリップと同じ名前で、既に再生中なら何もしない
+	if (animator.currentClip && animator.currentClip->GetName() == clipName && animator.isPlaying && !absolutePlay)
+	{
+		return;
+	}
+
+	// クリップの存在をチェック
+	auto it = animator.clips.find(clipName);
+	if (it == animator.clips.end() || !it->second)
+	{
+		animator.isPlaying = false;
+		animator.currentClip = nullptr;
+		return;
+	}
+
+	// 再生するクリップ名を設定し、時間をリセット
+	animator.currentClipName = clipName;
+	animator.currentClip = it->second;
+	animator.currentTime = 0.0f;
+	animator.isPlaying = true;
+}
+
+void AnimationSystem::Play(Animator& animator, Animation& newAnimation)
+{
+	// 現在再生中のクリップと同じ名前で、既に再生中なら何もしない
+	if (animator.currentClip && animator.currentClip->GetName() == newAnimation.GetName() && animator.isPlaying)
+	{
+		return;
+	}
+
+	// 再生するクリップ名を設定し、時間をリセット
+	animator.currentClipName = newAnimation.GetName();
+	animator.currentClip = &newAnimation;
+	animator.currentTime = 0.0f;
+	animator.isPlaying = true;
+}
+
+Vector3 AnimationSystem::InterpolatePosition(float animationTime, const BoneAnimation& boneAnim)
+{
+	if (boneAnim.positions.size() == 1)
+	{
+		return boneAnim.positions[0].value;
+	}
+
+	int p0_index = FindKeyfrmeIndex(animationTime, boneAnim.positions);
+	int p1_index = p0_index + 1;
+
+	float t0 = boneAnim.positions[p0_index].timeStamp;
+	float t1 = boneAnim.positions[p1_index].timeStamp;
+	float scaleFactor = (animationTime - t0) / (t1 - t0);
+
+	return Vector3::Lerp(boneAnim.positions[p0_index].value, boneAnim.positions[p1_index].value, scaleFactor);
+}
+
+Quaternion AnimationSystem::InterpolateRotation(float animationTime, const BoneAnimation& boneAnim)
+{
+	if (boneAnim.rotations.size() == 1)
+	{
+		return boneAnim.rotations[0].value;
+	}
+
+	int r0_index = FindKeyfrmeIndex(animationTime, boneAnim.rotations);
+	int r1_index = r0_index + 1;
+
+	float t0 = boneAnim.rotations[r0_index].timeStamp;
+	float t1 = boneAnim.rotations[r1_index].timeStamp;
+	float scaleFactor = (animationTime - t0) / (t1 - t0);
+
+	return Quaternion::Slerp(boneAnim.rotations[r0_index].value, boneAnim.rotations[r1_index].value, scaleFactor);
+}
+
+Vector3 AnimationSystem::InterpolateScale(float animationTime, const BoneAnimation& boneAnim)
+{
+	if (boneAnim.scales.size() == 1)
+	{
+		return boneAnim.scales[0].value;
+	}
+
+	int s0_index = FindKeyfrmeIndex(animationTime, boneAnim.scales);
+	int s1_index = s0_index + 1;
+
+	float t0 = boneAnim.scales[s0_index].timeStamp;
+	float t1 = boneAnim.scales[s1_index].timeStamp;
+	float scaleFactor = (animationTime - t0) / (t1 - t0);
+
+	return Vector3::Lerp(boneAnim.scales[s0_index].value, boneAnim.scales[s1_index].value, scaleFactor);
+}
+
+void AnimationSystem::CalculateBoneTransform(const Bone* bone, const Matrix4x4& parentTransform, const Animation* animation, float currentTime, std::unordered_map<std::string, Matrix4x4>& boneTransforms)
+{
+	if (!bone) return;
+
+	std::string boneName = bone->name;
+	Matrix4x4 nodeTransform = bone->localTransform;
+
+	auto& boneAnimations = animation->GetBoneAnimations();
+
+	if (boneAnimations.empty())
+	{
+		return;
+	}
+
+	if (boneAnimations.find(boneName) != boneAnimations.end())
+	{
+		const BoneAnimation& boneAnim = boneAnimations.at(boneName);
+		Vector3 pos = InterpolatePosition(currentTime, boneAnim);
+		Quaternion rot = InterpolateRotation(currentTime, boneAnim);
+		Vector3 scale = InterpolateScale(currentTime, boneAnim);
+		nodeTransform = Matrix4x4::TRS(pos, rot, scale);
+	}
+
+	Matrix4x4 globalTransform = nodeTransform * parentTransform;
+
+	const auto& boneInfoMap =
+		boneTransforms[boneName] = globalTransform;
+
+	for (const auto& child : bone->children)
+	{
+		CalculateBoneTransform(child, globalTransform, animation, currentTime, boneTransforms);
+	}
+}
+
+void AnimationSystem::Update(World& world)
+{
+	View<Animator> view(world);
+
+	for (auto [entity, animator] : view)
+	{
+		// クリップの切り替え処理
+		if (!animator.currentClip || animator.currentClip->GetName() != animator.currentClipName)
+		{
+			auto it = animator.clips.find(animator.currentClipName);
+			if (it != animator.clips.end())
+			{
+				// 新しいクリップを設定
+				animator.currentClip = it->second;
+
+				// 再生時間をリセット
+				animator.currentTime = 0.0f;
+			}
+			else
+			{
+				// 指定された名前のクリップが見つからない場合は再生を止める
+				animator.currentClip = nullptr;
+				animator.isPlaying = false;
+			}
+		}
+
+		if (!animator.isPlaying || !animator.currentClip)
+		{
+			continue;
+		}
+
+		float lastTime = animator.currentTime;
+		bool looped = false;
+		float duration = animator.currentClip->GetDuration();
+
+		// 時間を更新
+		animator.currentTime += Time::GetDeltaTime() * animator.currentClip->GetTicksPerSecond();
+		if (animator.currentTime >= duration)
+		{
+			if (animator.isLoop)
+			{
+				animator.currentTime = fmod(animator.currentTime, duration);
+				looped = true;
+			}
+			else
+			{
+				animator.currentTime = duration;
+				animator.isPlaying = false;
+			}
+		}
+
+		if (!animator.skeleton)
+		{
+			continue;
+		}
+
+		std::unordered_map<std::string, Matrix4x4> boneTransforms;
+		CalculateBoneTransform(animator.skeleton->GetRootBone(), Matrix4x4::identity, animator.currentClip, animator.currentTime, boneTransforms);
+
+		const auto& events = animator.currentClip->GetEvents();
+
+		if (!events.empty())
+		{
+			if (!looped)
+			{
+				// 通常時：前回時間 < timeStamp <= 今回時間 のイベントを実行
+				for (const auto& event : events)
+				{
+					if (event.timeStamp > lastTime && event.timeStamp <= animator.currentTime)
+					{
+						if (event.value)
+						{
+							// イベントが持っている関数を実行
+							event.value(world, entity);
+						}
+					}
+				}
+			}
+			else
+			{
+				// ループ跨ぎ時：区間が2つに分かれるのでそれぞれチェック
+				// 前回時間 から アニメーション終了(duration) まで
+				for (const auto& event : events)
+				{
+					if (event.timeStamp > lastTime && event.timeStamp <= duration)
+					{
+						if (event.value)
+						{
+							event.value(world, entity);
+						}
+					}
+				}
+				// アニメーション開始(0) から 今回時間 まで
+				for (const auto& event : events)
+				{
+					if (event.timeStamp >= 0.0f && event.timeStamp <= animator.currentTime)
+					{
+						if (event.value)
+						{
+							event.value(world, entity);
+						}
+					}
+				}
+			}
+		}
+
+		// 最終的な行列を計算
+		animator.finalBoneMatrices.resize(animator.skeleton->GetBoneCount());
+		animator.socketGlobalMatrices.resize(animator.skeleton->GetBoneCount());
+		for (const auto& [boneName, boneInfo] : animator.skeleton->GetBoneInfoMap())
+		{
+			auto it = boneTransforms.find(boneName);
+			if (it != boneTransforms.end())
+			{
+				Matrix4x4 globalTransform = it->second;
+
+				// SkinnedMeshRenderer用の行列
+				animator.finalBoneMatrices[boneInfo.id] = boneInfo.offsetMatrix * globalTransform * animator.skeleton->GetGlobalInverseTransform();
+
+				// BoneSocket用の行列 (ボーンのグローバル変換行列そのまま)
+				animator.socketGlobalMatrices[boneInfo.id] = globalTransform;
+			}
+		}
+	}
+}
