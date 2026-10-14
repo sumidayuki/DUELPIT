@@ -9,6 +9,8 @@ namespace UIAPI
 
 	bool IsCanvasEnabled(World& world, Entity canvas);
 
+	Entity CreateLayout(World& world, const std::wstring& layoutPath, Entity parentEntity = INVALID_ENTITY, LayerMask layer = Layers::UI);
+
 	// Canvasエンティティを作成します。
     Entity CreateCanvas(World& world, RenderMode mode = RenderMode::ScreenSpaceOverlay, int sortingOrder = 0);
 	Entity CreateCanvas(World& world, const std::string& name, const Canvas& canvas);

@@ -5,6 +5,7 @@ class GameManagerSystem : public System
 private:
 	Entity m_player;
 	Entity m_enemy;
+	bool m_isPause;
 
 public:
 	Entity GetPlayer() const { return m_player; }

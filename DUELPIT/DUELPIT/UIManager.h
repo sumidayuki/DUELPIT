@@ -24,6 +24,9 @@ public:
 	
 	// キャンバスを取得
 	Entity GetCanvas(uint64_t canvasID);
+
+	// 開いているキャンバスのスタックを取得
+	std::vector<Entity> GetCanvasStack() const { return m_canvasStack; }
 	
 	// UIオブジェクトを追加
 	void AddUIObject(Entity entity, uint64_t canvasID, uint64_t objectID);

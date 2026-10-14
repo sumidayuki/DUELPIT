@@ -1,11 +1,16 @@
 #pragma once
 
+#include "UILayoutImporter.h"
+
+class UILayout;
+
 enum class AssetType
 {
 	Texture,
 	Model,
 	Audio,
-	Effect
+	Effect,
+	UILayout
 };
 
 // aiNodeの代替。エンティティ階層を表します。
@@ -37,11 +42,13 @@ private:
 	ModelImporter m_modImp;
 	AudioImporter m_audImp;
 	EffectImporter m_effImp;
+	UILayoutImporter m_uiImp;
 
 	std::unordered_map<std::wstring, ComPtr<Texture2D>> m_textureCache;
 	std::unordered_map<std::wstring, ModelData*> m_modelCache;
 	std::unordered_map<std::wstring, AudioClip*> m_audioCache;
 	std::unordered_map<std::wstring, Effect*> m_effectCache;
+	std::unordered_map<std::wstring, UILayout*> m_uiLayoutCache;
 
 private:
 	AssetManager();
@@ -137,6 +144,13 @@ inline T* AssetManager::GetAsset(AssetType type, const std::wstring& path)
 		if (m_effectCache.count(path))
 		{
 			return (T*)m_effectCache[path];
+		}
+		break;
+
+	case AssetType::UILayout:
+		if (m_uiLayoutCache.count(path))
+		{
+			return (T*)m_uiLayoutCache[path];
 		}
 		break;
 	}

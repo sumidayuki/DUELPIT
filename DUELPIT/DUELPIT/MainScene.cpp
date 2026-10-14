@@ -44,6 +44,7 @@ bool MainScene::Load()
 	AssetManager::GetInstance()->LoadAsset(AssetType::Audio, L"Assets/Audio/SE/Warrok/se-punch.wav");
 	AssetManager::GetInstance()->LoadAsset(AssetType::Audio, L"Assets/Audio/SE/Warrok/se-jump.wav");
 	AssetManager::GetInstance()->LoadAssetsFromDirectory(AssetType::Effect, L"Assets/Effects");
+	AssetManager::GetInstance()->LoadAssetsFromDirectory(AssetType::UILayout, L"Assets/Json/UI");
 
 	// Worldにシステムを追加
 	m_world.AddSystem(std::make_unique<GameManagerSystem>());
@@ -57,10 +58,6 @@ bool MainScene::Load()
 	m_world.AddSystem(std::make_unique<AIStateMachineSystem>());
 	m_world.AddSystem(std::make_unique<EnemySystem>());
 	m_world.AddSystem(std::make_unique<ArrowSystem>());
-
-	UILayoutImporter importer;
-	importer.Import(L"Assets/Json/UI/MainSceneUI.json", m_world);
-	importer.Import(L"Assets/Json/UI/ResultUI.json", m_world);
 
 	UIManager::GetInstance()->ShowCanvas(m_world, HashString("MainSceneUI"));
 

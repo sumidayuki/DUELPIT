@@ -1,4 +1,5 @@
 #include "AssetManager.h"
+#include "UILayout.h"
 
 AssetManager::AssetManager()
 {
@@ -71,6 +72,19 @@ void AssetManager::LoadAsset(AssetType type, const std::wstring& path)
 			}
 			break;
 		}
+        case AssetType::UILayout:
+        {
+            if (m_uiLayoutCache.count(path))
+            {
+                return;
+            }
+            UILayout* layout = m_uiImp.Import(path);
+            if (layout)
+            {
+                m_uiLayoutCache[path] = layout;
+            }
+            break;
+		}
     }
 
 #if _DEBUG
@@ -110,6 +124,12 @@ void AssetManager::LoadAssetsFromDirectory(AssetType type, const std::wstring& d
 			if (entry.path().extension() == L".efkefc")
 			{
 				LoadAsset(AssetType::Effect, entry.path().generic_wstring());
+			}
+			break;
+		case AssetType::UILayout:
+			if (entry.path().extension() == L".json")
+			{
+				LoadAsset(AssetType::UILayout, entry.path().generic_wstring());
 			}
 			break;
 		}

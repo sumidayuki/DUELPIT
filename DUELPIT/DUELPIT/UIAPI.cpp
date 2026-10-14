@@ -19,6 +19,11 @@ namespace UIAPI
 		return transform->isActive;
 	}
 
+	Entity CreateLayout(World& world, const std::string& layoutPath, Entity parentEntity, LayerMask layer)
+	{
+		UILayout* layout = AssetManager::GetInstance()->GetAsset<UILayout>(AssetType::UILayout, StringToWString(layoutPath));
+	}
+
 	Entity CreateCanvas(World& world, RenderMode mode, int sortingOrder)
 	{
 		Entity e = world.CreateEntity("Canvas");

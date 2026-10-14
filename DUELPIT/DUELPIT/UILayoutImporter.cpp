@@ -1,5 +1,7 @@
 #include "UILayoutImporter.h"
 #include "ButtonFunctionRegistry.h"
+#include "UILayout.h"
+#include "UINavigation.h"
 
 static const std::unordered_map<std::string, TextAnchor> TextAnchorMap =
 {
@@ -32,19 +34,19 @@ UILayoutImporter::UILayoutImporter()
 {
 }
 
-bool UILayoutImporter::Import(const std::wstring path, World& world)
+UILayout* UILayoutImporter::Import(const std::wstring path)
 {
 	SetAssetPath(path.c_str());
-	return Import(world);
+	return Import();
 }
 
-bool UILayoutImporter::Import(const wchar_t* path, World& world)
+UILayout* UILayoutImporter::Import(const wchar_t* path)
 {
 	SetAssetPath(path);
-	return Import(world);
+	return Import();
 }
 
-bool UILayoutImporter::Import(World& world)
+UILayout* UILayoutImporter::Import()
 {
 	// パスを取得
 	const std::wstring& path = GetAssetPath();
@@ -55,12 +57,14 @@ bool UILayoutImporter::Import(World& world)
 		return false;
 	}
 
+	std::unique_ptr<CanvasData> canvasData = std::make_unique<CanvasData>();
+
 	try
 	{
 		std::string text = StringUtility::ReadAllText(path);
 		Json json = Json::parse(text);
 
-		ProcessCanvas(json, world);
+		ProcessCanvas(json, *canvasData);
 	}
 	catch (const Json::parse_error& e)
 	{
@@ -89,41 +93,46 @@ bool UILayoutImporter::Import(World& world)
 
 	OutputDebugStringA("UILayoutImporter: インポートに成功しました。");
 
-	return true;
+	CanvasData* data = canvasData.release();
+	UILayout* layout = UILayout::Create(std::move(*data));
+
+	if (!layout)
+	{
+		delete data;
+		return nullptr;
+	}
+
+	return layout;
 }
 
-void UILayoutImporter::ProcessCanvas(const Json& json, World& world)
+void UILayoutImporter::ProcessCanvas(const Json& json, CanvasData& canvasData)
 {
 	const Json& canvasJson = json.value("canvas", Json::object());
-
-	Canvas canvas;
 	
 	// レンダーモードを設定
 	std::string renderMode = canvasJson.value("renderMode", "ScreenSpaceOverlay");
-	canvas.renderMode = StrToRenderModeMap.at(renderMode);
+	canvasData.canvas.renderMode = StrToRenderModeMap.at(renderMode);
 
 	// キャンバスモードを設定
 	std::string canvasMode = canvasJson.value("canvasMode", "HUD");
-	canvas.canvasMode = StrToCanvasModeMap.at(canvasMode);
-
+	canvasData.canvas.canvasMode = StrToCanvasModeMap.at(canvasMode);
+	
 	// 描画順を設定
-	canvas.sortingOrder = canvasJson.value("sortingOrder", 0);
+	canvasData.canvas.sortingOrder = canvasJson.value("sortingOrder", 0);
 	
 	// このキャンバスを開いているときにpauseするか
-	canvas.pauseGame = canvasJson.value("pauseGame", true);
+	canvasData.canvas.pauseGame = canvasJson.value("pauseGame", true);
 
 	// キャンバスの名前を取得
-	std::string canvasName = UTF16LEtoUTF8::Convert(GetFileNameWithoutExtension());
-	uint64_t canvasID = HashString(canvasName.c_str());
-
-	Entity canvasEntity = UIAPI::CreateCanvas(world, canvasName, canvas);
-	UIManager::GetInstance()->AddCanvas(canvasEntity, HashString(UTF16LEtoUTF8::Convert(GetFileNameWithoutExtension()).c_str()));
+	canvasData.name = UTF16LEtoUTF8::Convert(GetFileNameWithoutExtension());
 
 	// キャンバス内で描画するUIObjectの作成
 	const Json& elements = canvasJson.value("elements", Json::array());
 	for (const auto& elementJson : elements)
 	{
-		ProcessElement(elementJson, canvasEntity, world);
+		UIElement element;
+		ProcessElement(elementJson, element);
+		canvasData.uiElements.push_back(element);
 	}
 
 	// キャンバスを開いた際に選択するオブジェクトを設定
@@ -133,53 +142,50 @@ void UILayoutImporter::ProcessCanvas(const Json& json, World& world)
 
 		const uint64_t objectID = HashString(firstSelectedName.c_str());
 
-		Entity firstSelected = UIManager::GetInstance()->GetUIObject(canvasID, objectID);
-
-		if (firstSelected != INVALID_ENTITY)
-		{
-			Canvas* canvasData = world.GetComponent<Canvas>(canvasEntity);
-
-			if (canvasData)
-			{
-				canvasData->firstSelected = firstSelected;
-			}
-		}
-		else
-		{
-			std::ostringstream oss;
-			oss << "UILayoutImporter: " << "firstSelected UI object not found: " << firstSelectedName << "\n";
-			OutputDebugStringA(oss.str().c_str());
-		}
+		canvasData.canvas.firstSelected = objectID;
 	}
-
-	UIAPI::SetEnableCanvas(world, canvasEntity, false);
 }
 
-void UILayoutImporter::ProcessElement(const Json& json, Entity parent, World& world)
+void UILayoutImporter::ProcessElement(const Json& json, UIElement& element)
 {
+	element.name = json.value("name", "UIElement");
 	const std::string& type = json["type"].get<std::string>();
 
-	Entity element = INVALID_ENTITY;
+	if(json.contains("rectTransform"))
+	{
+		const Json& rectJson = json.value("rectTransform", Json::object());
+		RectTransform rectT;
+		ProcessRectTransform(rectJson, rectT);
+		element.rectTransform = std::make_unique<RectTransform>(std::move(rectT));
+	}
+
+	if(json.contains("graphic"))
+	{
+		const Json& graphicJson = json.value("graphic", Json::object());
+		UIGraphic graphic;
+		ProcessUIGraphic(graphicJson, graphic);
+		element.graphic = std::make_unique<UIGraphic>(std::move(graphic));
+	}
 
 	if (type == "Image")
 	{
-		element = ProcessImage(json, parent, world);
+		ProcessImage(json, element);
 	}
 	else if (type == "Panel")
 	{
-		element = ProcessPanel(json, parent, world);
+		ProcessPanel(json, element);
 	}
 	else if (type == "Button")
 	{
-		element = ProcessButton(json, parent, world);
+		ProcessButton(json, element);
 	}
 	else if (type == "Slider")
 	{
-		element = ProcessSlider(json, parent, world);
+		ProcessSlider(json, element);
 	}
 	else if(type == "VerticalLayoutGroup")
 	{
-		 ProcessVerticalLayout(json, parent, world);
+		 ProcessVerticalLayout(json, element);
 	}
 	else
 	{
@@ -193,7 +199,23 @@ void UILayoutImporter::ProcessElement(const Json& json, Entity parent, World& wo
 		const Json& navJson = json.value("navigation", Json::object());
 		UINavigation navigation;
 		ProcessNavigation(navJson, navigation);
-		world.AddComponent<UINavigation>(element, navigation);
+		element.navigation = std::make_unique<UINavigation>(std::move(navigation));
+	}
+
+	if (json.contains("children"))
+	{
+		const Json& childrenJson = json.value("children", Json::array());
+		ProcessChildren(childrenJson, element);
+	}
+}
+
+void UILayoutImporter::ProcessChildren(const Json& json, UIElement& element)
+{
+	for (const auto& childJson : json)
+	{
+		UIElement childElement;
+		ProcessElement(childJson, childElement);
+		element.children.push_back(std::make_unique<UIElement>(std::move(childElement)));
 	}
 }
 
@@ -217,85 +239,26 @@ void UILayoutImporter::ProcessNavigation(const Json& json, UINavigation& navigat
 	}
 }
 
-Entity UILayoutImporter::ProcessImage(const Json& json, Entity parent, World& world)
+void UILayoutImporter::ProcessImage(const Json& json, UIElement& element)
 {
-	const std::string& name = json.value("name", "UIImage");
-
-	const Json& rectJson = json.value("rectT", Json::object());
-	RectTransform rectT;
-	ProcessRectTransform(rectJson, rectT);
-
-	const Json& graphicJson = json.value("graphic", Json::object());
-	UIGraphic graphic;
-	ProcessUIGraphic(graphicJson, graphic);
-	
-	Texture2D* texture = AssetManager::GetInstance()->GetAsset<Texture2D>(AssetType::Texture, UTF8toUTF16LE::Convert(json.value("source", "")));
-
-	std::vector<float> rectTemp = json.value("rect", std::vector<float>{ 0, 0, (float)texture->GetWidth(), (float)texture->GetHeight() });
-
-	Rect rect;
-	rect.x = rectTemp[0];
-	rect.y = (float)texture->GetHeight() - rectTemp[1] - rectTemp[3];
-	rect.width = rectTemp[2];
-	rect.height = rectTemp[3];
-
-	Sprite* sprite = Sprite::Create(texture, rect, Vector2(0.5f, 0.5f), 100.0f, 100.0f);
+	const Json& spriteJson = json.value("sprite", Json::object());
+	Sprite* sprite = ProcessSprite(spriteJson);
 
 	Image image;
 	image.sprite = sprite;
 
-	Entity imageEntity = UIAPI::CreateImage(world, name, parent, rectT, graphic, image);
-	UIManager::GetInstance()->AddUIObject(imageEntity, HashString(UTF16LEtoUTF8::Convert(GetFileNameWithoutExtension()).c_str()), HashString(name.c_str()));
-
-	const Json& children = json.value("children", Json::array());
-	for (const auto& childJson : children)
-	{
-		ProcessElement(childJson, imageEntity, world);
-	}
-
-	return imageEntity;
+	element.component = std::make_unique<std::variant<std::monostate, Image, Button, Slider, VerticalLayoutGroup>>(std::move(image));
 }
 
-Entity UILayoutImporter::ProcessPanel(const Json& json, Entity parent, World& world)
+void UILayoutImporter::ProcessPanel(const Json& json, UIElement& element)
 {
-	const std::string& name = json.value("name", "UIPanel");
 
-	const Json& rectJson = json.value("rect", Json::object());
-	RectTransform rect;
-	ProcessRectTransform(rectJson, rect);
-	
-	const Json& graphicJson = json.value("graphic", Json::object());
-	UIGraphic graphic;
-	ProcessUIGraphic(graphicJson, graphic);
-	
-	Entity panelEntity = UIAPI::CreatePanel(world, name, parent, Color::white, rect, graphic);
-	UIManager::GetInstance()->AddUIObject(panelEntity, HashString(UTF16LEtoUTF8::Convert(GetFileNameWithoutExtension()).c_str()), HashString(name.c_str()));
-
-	const Json& children = json.value("children", Json::array());
-	for (const auto& childJson : children)
-	{
-		ProcessElement(childJson, panelEntity, world);
-	}
-
-	return panelEntity;
 }
 
-Entity UILayoutImporter::ProcessButton(const Json& json, Entity parent, World& world)
+void UILayoutImporter::ProcessButton(const Json& json, UIElement& element)
 {
-	const std::string& name = json.value("name", "UIButton");
-
-	const Json& rectJson = json.value("rect", Json::object());
-	RectTransform rect;
-	ProcessRectTransform(rectJson, rect);
-
-	const Json& graphicJson = json.value("graphic", Json::object());
-	UIGraphic graphic;
-	ProcessUIGraphic(graphicJson, graphic);
-
-	const std::string& sourcePath = json.value("source", "");
-	Texture2D* texture = AssetManager::GetInstance()->GetAsset<Texture2D>(AssetType::Texture, UTF8toUTF16LE::Convert(sourcePath));
-	Rect spriteRect = { 0, 0, (float)texture->GetWidth(), (float)texture->GetHeight() };
-	Sprite* sprite = Sprite::Create(texture, spriteRect, Vector2(0.5f, 0.5f), 1.0f, 1.0f);
+	const Json& spriteJson = json.value("sprite", Json::object());
+	Sprite* sprite = ProcessSprite(spriteJson);
 
 	std::vector<float> normalColor = json.value("normalColor", std::vector<float>{ 0.8f, 0.8f, 0.8f, 1.0f });
 	std::vector<float> hoveredColor = json.value("hoveredColor", std::vector<float>{ 0.9f, 0.9f, 0.9f, 1.0f });
@@ -314,16 +277,7 @@ Entity UILayoutImporter::ProcessButton(const Json& json, Entity parent, World& w
 	const Json& onClick = json.value("onClick", Json::object());
 	ProcessOnClick(onClick, button);
 
-	Entity buttonEntity = UIAPI::CreateButton(world, name, parent, rect, graphic, button);
-	UIManager::GetInstance()->AddUIObject(buttonEntity, HashString(UTF16LEtoUTF8::Convert(GetFileNameWithoutExtension()).c_str()), HashString(name.c_str()));
-
-	const Json& children = json.value("children", Json::array());
-	for (const auto& childJson : children)
-	{
-		ProcessElement(childJson, buttonEntity, world);
-	}
-
-	return buttonEntity;
+	element.component = std::make_unique<std::variant<std::monostate, Image, Button, Slider, VerticalLayoutGroup>>(std::move(button));
 }
 
 void UILayoutImporter::ProcessOnClick(const Json& json, Button& button)
@@ -347,34 +301,23 @@ void UILayoutImporter::ProcessOnClick(const Json& json, Button& button)
 	}
 }
 
-Entity UILayoutImporter::ProcessSlider(const Json& json, Entity parent, World& world)
+void UILayoutImporter::ProcessSlider(const Json& json, UIElement& element)
 {
-	const std::string& name = json.value("name", "UISlider");
-
-	const Json& rectJson = json.value("rect", Json::object());
-	RectTransform rect;
-	ProcessRectTransform(rectJson, rect);
-
-	const Json& graphicJson = json.value("graphic", Json::object());
-	UIGraphic graphic;
-	ProcessUIGraphic(graphicJson, graphic);
-
-	const std::string& backgroundPath = json.value("background", "");
+	// 背景画像と色を取得
+	const std::string& background = json.value("background", Json::object());
+	Sprite* backgroundSprite = ProcessSprite(background);
 	std::vector<float> backgroundColor = json.value("backgroundColor", std::vector<float>{ 1.0f, 1.0f, 1.0f, 1.0f });
-	Texture2D* backgroundTexture = AssetManager::GetInstance()->GetAsset<Texture2D>(AssetType::Texture, UTF8toUTF16LE::Convert(backgroundPath));
-	Rect backgroundRect = { 0, 0, (float)backgroundTexture->GetWidth(), (float)backgroundTexture->GetHeight() };
-	Sprite* backgroundSprite = Sprite::Create(backgroundTexture, backgroundRect, Vector2(0.5f, 0.5f), 1.0f, 1.0f);
 	Color bgColor = Color(backgroundColor[0], backgroundColor[1], backgroundColor[2], backgroundColor[3]);
 
-	const std::string& fillPath = json.value("fill", "");
+	// 画像と色を取得
+	const std::string& fill = json.value("fill", Json::object());
+	Sprite* fillSprite = ProcessSprite(fill);
 	std::vector<float> fillColor = json.value("fillColor", std::vector<float>{ 1.0f, 1.0f, 1.0f, 1.0f });
-	Texture2D* fillTexture = AssetManager::GetInstance()->GetAsset<Texture2D>(AssetType::Texture, UTF8toUTF16LE::Convert(fillPath));
-	Rect fillRect = { 0, 0, (float)fillTexture->GetWidth(), (float)fillTexture->GetHeight() };
-	Sprite* fillSprite = Sprite::Create(fillTexture, fillRect, Vector2(0.5f, 0.5f), 1.0f, 1.0f);
 	Color fColor = Color(fillColor[0], fillColor[1], fillColor[2], fillColor[3]);
 
 	float initialValue = json.value("initialValue", 0.5f);
 
+	// Sliderを作成
 	Slider slider;
 	slider.backgroundSprite = backgroundSprite;
 	slider.backgroundColor = bgColor;
@@ -383,26 +326,12 @@ Entity UILayoutImporter::ProcessSlider(const Json& json, Entity parent, World& w
 	slider.value = initialValue;
 	slider.isLeftToRight = json.value("isLeftToRight", true);
 
-	Entity sliderEntity = UIAPI::CreateSlider(world, name, parent, rect, graphic, slider);
-	UIManager::GetInstance()->AddUIObject(sliderEntity, HashString(UTF16LEtoUTF8::Convert(GetFileNameWithoutExtension()).c_str()), HashString(name.c_str()));
-
-	const Json& children = json.value("children", Json::array());
-	for (const auto& childJson : children)
-	{
-		ProcessElement(childJson, sliderEntity, world);
-	}
-
-	return sliderEntity;
+	// UIElementにSliderを設定
+	element.component = std::make_unique<std::variant<std::monostate, Image, Button, Slider, VerticalLayoutGroup>>(std::move(slider));
 }
 
-void UILayoutImporter::ProcessVerticalLayout(const Json& json, Entity parent, World& world)
+void UILayoutImporter::ProcessVerticalLayout(const Json& json, UIElement& element)
 {
-	const std::string& name = json.value("name", "UIVerticalLayoutGroup");
-
-	const Json& rectJson = json.value("rect", Json::object());
-	RectTransform rect;
-	ProcessRectTransform(rectJson, rect);
-
 	float spacing = json.value("spacing", 0.0f);
 
 	const Json& rectOffsetJson = json.value("rectOffset", Json::object());
@@ -421,27 +350,48 @@ void UILayoutImporter::ProcessVerticalLayout(const Json& json, Entity parent, Wo
 		}
 	}
 	
-	Entity vlgEntity = world.CreateEntity(name, Layers::UI);
-	
 	VerticalLayoutGroup vlg;
 	vlg.spacing = spacing;
 	vlg.padding = rectOffset;
 	vlg.childAlignment = childAlignment;
 
-	world.AddComponent<RectTransform>(vlgEntity, rect);
-	world.AddComponent<VerticalLayoutGroup>(vlgEntity, vlg);
+	element.component = std::make_unique<std::variant<std::monostate, Image, Button, Slider, VerticalLayoutGroup>>(std::move(vlg));
+}
 
-	Transform* vlgT = world.GetComponent<Transform>(vlgEntity);
-	Transform* parentT = world.GetComponent<Transform>(parent);
-	TransformAPI::SetParent(*vlgT, parentT);
-
-	UIManager::GetInstance()->AddUIObject(vlgEntity, HashString(UTF16LEtoUTF8::Convert(GetFileNameWithoutExtension()).c_str()), HashString(name.c_str()));
-
-	const Json& elementsJson = json.value("elements", Json::array());
-	for (const auto& elementJson : elementsJson)
+Sprite* UILayoutImporter::ProcessSprite(const Json& json)
+{
+	// スプライトのパスを取得
+	std::string source = json.value("source", "");
+	if (source == "")
 	{
-		ProcessElement(elementJson, vlgEntity, world);
+		// パスが設定されていなければ白い画像を設定する
+		source = "Assets/white.png";
 	}
+
+	// テクスチャを取得
+	Texture2D* texture = AssetManager::GetInstance()->GetAsset<Texture2D>(AssetType::Texture, UTF8toUTF16LE::Convert(source));
+	if (!texture)
+	{
+		// テクスチャが取得できなければ白い画像を設定する
+		AssetManager::GetInstance()->GetAsset<Texture2D>(AssetType::Texture, UTF8toUTF16LE::Convert("Assets/white.png"));
+	}
+
+	// Rectの作成
+	Rect rect;
+	std::vector<float> rectValues = json.value("rect", std::vector<float>{ 0.0f, 0.0f, (float)texture->GetWidth(), (float)texture->GetHeight() });
+	rect = Rect(rectValues[0], rectValues[1], rectValues[2], rectValues[3]);
+
+	// pivotの作成
+	Vector2 pivot;
+	std::vector<float> pivotValues = json.value("pivot", std::vector<float>{ 0.5f, 0.5f });
+	pivot = Vector2(pivotValues[0], pivotValues[1]);
+
+	// PixcelsPerUnitを設定
+	Vector2 pixelsPerUnit;
+	std::vector<float> pixelsPerUnitValues = json.value("pixelsPerUnit", std::vector<float>{ 1.0f, 1.0f });
+	pixelsPerUnit = Vector2(pixelsPerUnitValues[0], pixelsPerUnitValues[1]);
+
+	return Sprite::Create(texture, rect, pivot, pixelsPerUnit.x, pixelsPerUnit.y);
 }
 
 void UILayoutImporter::ProcessRectTransform(const Json& json, RectTransform& rect)

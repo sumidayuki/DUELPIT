@@ -1,24 +1,36 @@
 #pragma once
 
+#include "UINavigation.h"
+
+struct Button;
+class UILayout;
+struct CanvasData;
+struct UIElement;
+struct RectOffset;
+struct RectTransform;
+struct UIGraphic;
+
 class UILayoutImporter : public AssetImporter
 {
 public:
 	UILayoutImporter();
 	virtual ~UILayoutImporter() override = default;
-	bool Import(const std::wstring path, World& world);
-	bool Import(const wchar_t* path, World& world);
-	bool Import(World& world);
+	UILayout* Import(const std::wstring path);
+	UILayout* Import(const wchar_t* path);
+	UILayout* Import();
 
 private:
-	void ProcessCanvas(const Json& json, World& world);
-	void ProcessElement(const Json& json, Entity parent, World& world);
+	void ProcessCanvas(const Json& json, CanvasData& canvasData);
+	void ProcessElement(const Json& json, UIElement& element);
+	void ProcessChildren(const Json& json, UIElement& element);
 	void ProcessNavigation(const Json& json, UINavigation& navigation);
-	Entity ProcessImage(const Json& json, Entity parent, World& world);
-	Entity ProcessPanel(const Json& json, Entity parent, World& world);
-	Entity ProcessButton(const Json& json, Entity parent, World& world);
+	void ProcessImage(const Json& json, UIElement& element);
+	void ProcessPanel(const Json& json, UIElement& element);
+	void ProcessButton(const Json& json, UIElement& element);
 	void ProcessOnClick(const Json& json, Button& button);
-	Entity ProcessSlider(const Json& json, Entity parent, World& world);
-	void ProcessVerticalLayout(const Json& json, Entity parent, World& world);
+	void ProcessSlider(const Json& json, UIElement& element);
+	void ProcessVerticalLayout(const Json& json, UIElement& element);
+	Sprite* ProcessSprite(const Json& json);
 	void ProcessRectTransform(const Json& json, RectTransform& rect);
 	void ProcessRectOffset(const Json& json, RectOffset& rectOffset);
 	void ProcessUIGraphic(const Json& json, UIGraphic& graphic);

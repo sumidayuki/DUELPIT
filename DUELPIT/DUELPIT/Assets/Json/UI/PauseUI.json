@@ -1,0 +1,45 @@
+{
+    "canvas": {
+        "renderMode": "ScreenSpaceOverlay",
+        "canvasMode": "Interactive",
+        "firstSelected": "",
+        "sortingOrder": 0,
+        "pauseGame": true,
+        "elements": [
+            {
+                "name": "Background",
+                "type": "Image",
+                "source": "Assets/white.png",
+                "rectT": {
+                    "pos": [ 0, 0 ],
+                    "size": [ 1920, 1080 ],
+                    "anchorMin": [ 0.5, 0.5 ],
+                    "anchorMax": [ 0.5, 0.5 ],
+                    "pivot": [ 0.5, 0.5 ]
+                },
+                "graphic": {
+                    "color": [ 1, 1, 1, 0.5 ],
+                    "depth": 0,
+                    "raycastTarget": false
+                }
+            },
+            {
+                "name": "PauseText",
+                "type": "Image",
+                "source": "Assets/Images/Text/text_pause.png",
+                "rectT": {
+                    "pos": [ 0, -190 ],
+                    "size": [ 1000, 1000 ],
+                    "anchorMin": [ 0.5, 0.5 ],
+                    "anchorMax": [ 0.5, 0.5 ],
+                    "pivot": [ 0.5, 0.5 ]
+                },
+                "graphic": {
+                    "color": [ 1, 1, 1, 1 ],
+                    "depth": 0,
+                    "raycastTarget": false
+                }
+            }
+        ]
+    }
+}

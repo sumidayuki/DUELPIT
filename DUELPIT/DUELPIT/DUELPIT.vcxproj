@@ -269,6 +269,7 @@
     <ClCompile Include="UIButtonSystem.cpp" />
     <ClCompile Include="UICanvasSystem.cpp" />
     <ClCompile Include="UIEventSystem.cpp" />
+    <ClCompile Include="UILayout.cpp" />
     <ClCompile Include="UILayoutImporter.cpp" />
     <ClCompile Include="UILayoutSystem.cpp" />
     <ClCompile Include="UIManager.cpp" />
@@ -486,6 +487,7 @@
     <ClInclude Include="Image.h" />
     <ClInclude Include="UIEventSystem.h" />
     <ClInclude Include="UIGraphic.h" />
+    <ClInclude Include="UILayout.h" />
     <ClInclude Include="UILayoutImporter.h" />
     <ClInclude Include="UILayoutSystem.h" />
     <ClInclude Include="UIManager.h" />

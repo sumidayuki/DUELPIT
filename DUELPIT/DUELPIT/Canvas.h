@@ -24,6 +24,6 @@ struct Canvas : IComponentData
 	// 開いている間ゲームを停止するか
 	bool pauseGame = false;
 
-	// UI操作開始時に選択するオブジェクト
-	Entity firstSelected = INVALID_ENTITY;
+	// UI操作開始時に選択するオブジェクトID
+	uint64_t firstSelected = -1;
 };

@@ -831,6 +831,9 @@
     <ClCompile Include="ButtonFunctionRegistry.cpp">
       <Filter>Engine\Resource\Asset\UI</Filter>
     </ClCompile>
+    <ClCompile Include="UILayout.cpp">
+      <Filter>Engine\Resource\Asset\UI</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Keyboard.h">
@@ -1475,7 +1478,6 @@
     <ClInclude Include="ButtonFunctionRegistry.h">
       <Filter>Engine\Resource\Asset\UI</Filter>
     </ClInclude>
-    <ClInclude Include="UINavigationSystem.h" />
     <ClInclude Include="UINavigation.h">
       <Filter>Engine\ECS\Component\UI</Filter>
     </ClInclude>
@@ -1484,6 +1486,9 @@
     </ClInclude>
     <ClInclude Include="FontImporter.h">
       <Filter>Engine\Resource\AssetImporter\Font</Filter>
+    </ClInclude>
+    <ClInclude Include="UILayout.h">
+      <Filter>Engine\Resource\Asset\UI</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

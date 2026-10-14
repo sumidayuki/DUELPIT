@@ -46,6 +46,7 @@ bool GameManagerSystem::Load(World& world)
 {
 	m_enemy = INVALID_ENTITY;
 	m_player = INVALID_ENTITY;
+	m_isPause = false;
 
 	return true;
 }
@@ -111,4 +112,21 @@ void GameManagerSystem::Start(World& world)
 
 void GameManagerSystem::Update(World& world)
 {
+	if (Keyboard::GetKeyState(KeyCode::Escape).WasPressedThisFrame())
+	{
+		UIManager* instance = UIManager::GetInstance();
+		if (instance->HasOpenCanvas())
+		{
+			if (instance->GetCanvas(HashString("PauseUI")) == instance->GetCurrentCanvas())
+			{
+				instance->CloseCanvas(world);
+				m_isPause = false;
+			}
+			else
+			{
+				instance->OpenCanvas(world, HashString("PauseUI"));
+				m_isPause = true;
+			}
+		}
+	}
 }
